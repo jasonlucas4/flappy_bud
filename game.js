@@ -36,20 +36,24 @@ const BIRD_X = 50;
 const BIRD_WIDTH = 34;
 const BIRD_HEIGHT = 24;
 // NEW: Adjusted physics for better gameplay
-const GRAVITY = 0.4;         // Reduced from 0.5
-const JUMP_STRENGTH = -8;    // Reduced from -10
+const GRAVITY = 0.45;         // Balanced between 0.4 and 0.5
+const JUMP_STRENGTH = -9;    // Balanced between -8 and -10
 
 // Pipe properties
 const PIPE_WIDTH = 80;
 const PIPE_GAP = 150;
-const PIPE_SPEED = 2;        // Reduced from 3
+const PIPE_SPEED = 2.5;        // Balanced between 2 and 3
 
 // NEW: Particle system properties
-const PARTICLE_COUNT = 10;
-const PARTICLE_SPEED = 2;
-const PARTICLE_LIFE = 20;
-const PARTICLE_SIZE = 3;
-const PARTICLE_COLORS = ['rgba(255, 255, 255, 0.8)', 'rgba(200, 200, 200, 0.6)'];
+const PARTICLE_COUNT = 15;    // Increased from 10
+const PARTICLE_SPEED = 3;     // Increased from 2
+const PARTICLE_LIFE = 25;     // Increased from 20
+const PARTICLE_SIZE = 4;      // Increased from 3
+const PARTICLE_COLORS = [
+    'rgba(255, 255, 255, 0.9)',  // Brighter white
+    'rgba(200, 200, 200, 0.8)',  // Brighter grey
+    'rgba(150, 150, 150, 0.7)'   // Added third color
+];
 
 // NEW: Preload images function for better loading handling
 function loadImage(src) {
@@ -116,12 +120,14 @@ class Bird {
         // NEW: Update rotation based on velocity for smooth tilting
         this.rotation = Math.min(Math.max(-30, (-this.vel * 4)), 90) * Math.PI / 180;
 
-        // NEW: Add particles
-        if (!game.gameOver) {  // Only emit particles when alive
-            this.particles.push(new Particle(
-                this.x + this.width/4,  // Emit from middle-back of bird
-                this.y + this.height/2
-            ));
+        // NEW: Generate multiple particles per frame
+        if (!game.gameOver) {
+            for (let i = 0; i < 2; i++) {  // Generate 2 particles per frame
+                this.particles.push(new Particle(
+                    this.x,  // Emit from back of bird
+                    this.y + this.height/2 + (Math.random() * 4 - 2)  // Add slight vertical variation
+                ));
+            }
         }
 
         // NEW: Update existing particles
@@ -288,8 +294,8 @@ class Game {
 
         this.bird.update();
 
-        // NEW: Increased spawn interval from 1500 to 2000ms for better difficulty
-        if (this.lastPipeSpawn === 0 || performance.now() - this.lastPipeSpawn >= 2000) {
+        // NEW: Adjusted spawn interval for balanced difficulty
+        if (this.lastPipeSpawn === 0 || performance.now() - this.lastPipeSpawn >= 1700) {
             this.pipes.push(new Pipe());
             this.lastPipeSpawn = performance.now();
         }
