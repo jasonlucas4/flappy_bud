@@ -246,7 +246,7 @@ class Game {
             ctx.font = '18px MaximaNouva';
             ctx.fillText('Game Over!', SCREEN_WIDTH/2 - 40, SCREEN_HEIGHT/3);
             ctx.fillText(`Score: ${this.score}`, SCREEN_WIDTH/2 - 30, SCREEN_HEIGHT/3 + 50);
-            ctx.fillText('Tap to Restart', SCREEN_WIDTH/2 - 100, SCREEN_HEIGHT/3 + 100);
+            ctx.fillText('Tap to Restart and Try Again', SCREEN_WIDTH/2 - 100, SCREEN_HEIGHT/3 + 100);
         }
     }
 }
