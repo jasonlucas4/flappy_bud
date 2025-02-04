@@ -44,6 +44,13 @@ const PIPE_WIDTH = 80;
 const PIPE_GAP = 150;
 const PIPE_SPEED = 2;        // Reduced from 3
 
+// NEW: Particle system properties
+const PARTICLE_COUNT = 10;
+const PARTICLE_SPEED = 2;
+const PARTICLE_LIFE = 20;
+const PARTICLE_SIZE = 3;
+const PARTICLE_COLORS = ['rgba(255, 255, 255, 0.8)', 'rgba(200, 200, 200, 0.6)'];
+
 // NEW: Preload images function for better loading handling
 function loadImage(src) {
     return new Promise((resolve, reject) => {
@@ -52,6 +59,37 @@ function loadImage(src) {
         img.onerror = reject;
         img.src = src;
     });
+}
+
+// NEW: Particle class
+class Particle {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.life = PARTICLE_LIFE;
+        this.size = PARTICLE_SIZE;
+        this.color = PARTICLE_COLORS[Math.floor(Math.random() * PARTICLE_COLORS.length)];
+        this.vx = -PARTICLE_SPEED + Math.random() * 1;
+        this.vy = -1 + Math.random() * 2;
+    }
+
+    update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.life--;
+        this.size *= 0.95;  // Gradually shrink
+    }
+
+    draw() {
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    isDead() {
+        return this.life <= 0 || this.size < 0.5;
+    }
 }
 
 class Bird {
@@ -63,6 +101,8 @@ class Bird {
         this.height = BIRD_HEIGHT;
         // NEW: Add rotation property for smooth bird tilting
         this.rotation = 0;
+        // NEW: Add particles array
+        this.particles = [];
         
         // Load high-res image if available
         this.image = new Image();
@@ -75,6 +115,19 @@ class Bird {
         
         // NEW: Update rotation based on velocity for smooth tilting
         this.rotation = Math.min(Math.max(-30, (-this.vel * 4)), 90) * Math.PI / 180;
+
+        // NEW: Add particles
+        if (!game.gameOver) {  // Only emit particles when alive
+            this.particles.push(new Particle(
+                this.x + this.width/4,  // Emit from middle-back of bird
+                this.y + this.height/2
+            ));
+        }
+
+        // NEW: Update existing particles
+        this.particles.forEach(particle => particle.update());
+        // Remove dead particles
+        this.particles = this.particles.filter(particle => !particle.isDead());
     }
 
     jump() {
@@ -82,6 +135,9 @@ class Bird {
     }
 
     draw() {
+        // NEW: Draw particles first (behind bird)
+        this.particles.forEach(particle => particle.draw());
+
         // NEW: Save context state for rotation
         ctx.save();
         ctx.translate(this.x + this.width/2, this.y + this.height/2);
