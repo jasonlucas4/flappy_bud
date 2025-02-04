@@ -120,12 +120,12 @@ class Bird {
         // NEW: Update rotation based on velocity for smooth tilting
         this.rotation = Math.min(Math.max(-30, (-this.vel * 4)), 90) * Math.PI / 180;
 
-        // NEW: Generate multiple particles per frame
+        // NEW: Generate particles at the front of the bird
         if (!game.gameOver) {
-            for (let i = 0; i < 2; i++) {  // Generate 2 particles per frame
+            for (let i = 0; i < 2; i++) {
                 this.particles.push(new Particle(
-                    this.x,  // Emit from back of bird
-                    this.y + this.height/2 + (Math.random() * 4 - 2)  // Add slight vertical variation
+                    this.x + this.width,  // Changed to emit from front of bird
+                    this.y + this.height/2 + (Math.random() * 4 - 2)
                 ));
             }
         }
@@ -141,10 +141,7 @@ class Bird {
     }
 
     draw() {
-        // NEW: Draw particles first (behind bird)
-        this.particles.forEach(particle => particle.draw());
-
-        // NEW: Save context state for rotation
+        // NEW: Draw bird first
         ctx.save();
         ctx.translate(this.x + this.width/2, this.y + this.height/2);
         ctx.rotate(this.rotation);
@@ -162,8 +159,10 @@ class Bird {
             ctx.fillRect(-this.width/2, -this.height/2, this.width, this.height);
         }
         
-        // NEW: Restore context state after rotation
         ctx.restore();
+
+        // NEW: Draw particles after bird (so they appear in front)
+        this.particles.forEach(particle => particle.draw());
     }
 
     getBounds() {
