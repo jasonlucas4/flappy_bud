@@ -154,6 +154,7 @@ class Game {
     }
 
     setupEventListeners() {
+        // Keyboard controls (for desktop)
         document.addEventListener('keydown', (event) => {
             if (event.code === 'Space') {
                 if (!this.gameOver) {
@@ -166,11 +167,30 @@ class Game {
             }
         });
 
-        canvas.addEventListener('click', () => {
+        // Mouse and touch controls
+        canvas.addEventListener('click', (event) => {
+            event.preventDefault();
             if (!this.gameOver) {
                 this.bird.jump();
+            } else {
+                this.reset();
             }
         });
+
+        // Add touch event listeners
+        canvas.addEventListener('touchstart', (event) => {
+            event.preventDefault();
+            if (!this.gameOver) {
+                this.bird.jump();
+            } else {
+                this.reset();
+            }
+        });
+
+        // Prevent default touch behaviors
+        document.addEventListener('touchmove', (event) => {
+            event.preventDefault();
+        }, { passive: false });
     }
 
     update() {
