@@ -35,13 +35,14 @@ const RED = 'rgb(255, 0, 0)';
 const BIRD_X = 50;
 const BIRD_WIDTH = 34;
 const BIRD_HEIGHT = 24;
-const GRAVITY = 0.5;
-const JUMP_STRENGTH = -10;
+// NEW: Adjusted physics for better gameplay
+const GRAVITY = 0.4;         // Reduced from 0.5
+const JUMP_STRENGTH = -8;    // Reduced from -10
 
 // Pipe properties
 const PIPE_WIDTH = 80;
 const PIPE_GAP = 150;
-const PIPE_SPEED = 3;
+const PIPE_SPEED = 2;        // Reduced from 3
 
 // NEW: Preload images function for better loading handling
 function loadImage(src) {
@@ -132,25 +133,14 @@ class Pipe {
 
     draw() {
         if (this.image.complete) {
-            // NEW: Add shadows to pipes for depth
-            ctx.save();
-            ctx.shadowColor = 'rgba(0, 0, 0, 0.2)';
-            ctx.shadowBlur = 10;
-            ctx.shadowOffsetX = 5;
-            ctx.shadowOffsetY = 5;
-            
             // Draw top pipe
+            ctx.save();
             ctx.translate(this.x + this.width / 2, this.topHeight / 2);
             ctx.rotate(Math.PI);
             ctx.drawImage(this.image, -this.width / 2, -this.topHeight / 2, this.width, this.topHeight);
             ctx.restore();
 
-            // Draw bottom pipe with shadow
-            ctx.save();
-            ctx.shadowColor = 'rgba(0, 0, 0, 0.2)';
-            ctx.shadowBlur = 10;
-            ctx.shadowOffsetX = 5;
-            ctx.shadowOffsetY = 5;
+            // Draw bottom pipe
             ctx.drawImage(
                 this.image,
                 this.x,
@@ -158,7 +148,6 @@ class Pipe {
                 this.width,
                 SCREEN_HEIGHT - this.bottomY
             );
-            ctx.restore();
         } else {
             ctx.fillStyle = GREEN;
             ctx.fillRect(this.x, 0, this.width, this.topHeight);
@@ -243,7 +232,8 @@ class Game {
 
         this.bird.update();
 
-        if (this.lastPipeSpawn === 0 || performance.now() - this.lastPipeSpawn >= 1500) {
+        // NEW: Increased spawn interval from 1500 to 2000ms for better difficulty
+        if (this.lastPipeSpawn === 0 || performance.now() - this.lastPipeSpawn >= 2000) {
             this.pipes.push(new Pipe());
             this.lastPipeSpawn = performance.now();
         }
@@ -269,45 +259,30 @@ class Game {
     }
 
     draw() {
-        // NEW: Create gradient background for better visuals
-        const gradient = ctx.createLinearGradient(0, 0, 0, SCREEN_HEIGHT);
-        gradient.addColorStop(0, '#87CEEB');  // Sky blue at top
-        gradient.addColorStop(1, '#E0F6FF');  // Lighter blue at bottom
-        ctx.fillStyle = gradient;
+        // NEW: Simplified background for better performance
+        ctx.fillStyle = SKY_BLUE;
         ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
         this.pipes.forEach(pipe => pipe.draw());
         this.bird.draw();
 
-        // NEW: Add shadow to score text
-        ctx.save();
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-        ctx.shadowBlur = 4;
-        ctx.shadowOffsetX = 2;
-        ctx.shadowOffsetY = 2;
+        // Draw score
         ctx.fillStyle = WHITE;
         ctx.font = 'bold 24px MaximaNouva';
         ctx.fillText(`Score: ${this.score}`, 10, 30);
-        ctx.restore();
 
         if (this.gameOver) {
-            ctx.save();
-            // NEW: Add semi-transparent overlay for game over screen
+            // Semi-transparent overlay
             ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
             ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
             
-            // NEW: Add shadow to game over text
-            ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-            ctx.shadowBlur = 4;
-            ctx.shadowOffsetX = 2;
-            ctx.shadowOffsetY = 2;
+            // Game Over text
             ctx.fillStyle = WHITE;
             ctx.font = 'bold 32px MaximaNouva';
             ctx.fillText('Game Over!', SCREEN_WIDTH/2 - 80, SCREEN_HEIGHT/3);
             ctx.font = 'bold 24px MaximaNouva';
             ctx.fillText(`Score: ${this.score}`, SCREEN_WIDTH/2 - 40, SCREEN_HEIGHT/3 + 50);
             ctx.fillText('Tap to Restart', SCREEN_WIDTH/2 - 60, SCREEN_HEIGHT/3 + 100);
-            ctx.restore();
         }
     }
 }
