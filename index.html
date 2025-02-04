@@ -9,6 +9,10 @@
             border: 1px solid black;
             display: block;
             margin: 0 auto;
+            width: 100%;  /* Make canvas width responsive */
+            max-width: 400px;  /* Don't let it get wider than original */
+            height: auto;  /* Maintain aspect ratio */
+            touch-action: none;  /* Prevent default touch actions */
         }
         body {
             display: flex;
@@ -17,6 +21,7 @@
             height: 100vh;
             margin: 0;
             background-color: #f0f0f0;
+            padding: 10px;  /* Add some padding around the canvas */
         }
     </style>
 </head>
