@@ -1,9 +1,24 @@
 const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
+// NEW: Use alpha: false for better performance with non-transparent background
+const ctx = canvas.getContext('2d', { alpha: false });
+
+// NEW: Enable high-quality image scaling
+ctx.imageSmoothingEnabled = true;
+ctx.imageSmoothingQuality = 'high';
 
 // Screen dimensions
 const SCREEN_WIDTH = 400;
 const SCREEN_HEIGHT = 600;
+
+// NEW: Scale for high DPI displays (Retina support)
+const dpr = window.devicePixelRatio || 1;
+canvas.width = SCREEN_WIDTH * dpr;
+canvas.height = SCREEN_HEIGHT * dpr;
+ctx.scale(dpr, dpr);
+
+// NEW: Make sure the canvas CSS size matches our desired display size
+canvas.style.width = SCREEN_WIDTH + 'px';
+canvas.style.height = SCREEN_HEIGHT + 'px';
 
 // Game constants
 const FPS = 60;
@@ -28,6 +43,16 @@ const PIPE_WIDTH = 80;
 const PIPE_GAP = 150;
 const PIPE_SPEED = 3;
 
+// NEW: Preload images function for better loading handling
+function loadImage(src) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = src;
+    });
+}
+
 class Bird {
     constructor() {
         this.x = BIRD_X;
@@ -35,7 +60,10 @@ class Bird {
         this.vel = 0;
         this.width = BIRD_WIDTH;
         this.height = BIRD_HEIGHT;
+        // NEW: Add rotation property for smooth bird tilting
+        this.rotation = 0;
         
+        // Load high-res image if available
         this.image = new Image();
         this.image.src = 'bird.png';
     }
@@ -43,6 +71,9 @@ class Bird {
     update() {
         this.vel += GRAVITY;
         this.y += this.vel;
+        
+        // NEW: Update rotation based on velocity for smooth tilting
+        this.rotation = Math.min(Math.max(-30, (-this.vel * 4)), 90) * Math.PI / 180;
     }
 
     jump() {
@@ -50,12 +81,26 @@ class Bird {
     }
 
     draw() {
+        // NEW: Save context state for rotation
+        ctx.save();
+        ctx.translate(this.x + this.width/2, this.y + this.height/2);
+        ctx.rotate(this.rotation);
+        
         if (this.image.complete) {
-            ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
+            ctx.drawImage(
+                this.image, 
+                -this.width/2, 
+                -this.height/2, 
+                this.width, 
+                this.height
+            );
         } else {
             ctx.fillStyle = RED;
-            ctx.fillRect(this.x, this.y, this.width, this.height);
+            ctx.fillRect(-this.width/2, -this.height/2, this.width, this.height);
         }
+        
+        // NEW: Restore context state after rotation
+        ctx.restore();
     }
 
     getBounds() {
@@ -87,14 +132,25 @@ class Pipe {
 
     draw() {
         if (this.image.complete) {
-            // Draw top pipe
+            // NEW: Add shadows to pipes for depth
             ctx.save();
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.2)';
+            ctx.shadowBlur = 10;
+            ctx.shadowOffsetX = 5;
+            ctx.shadowOffsetY = 5;
+            
+            // Draw top pipe
             ctx.translate(this.x + this.width / 2, this.topHeight / 2);
             ctx.rotate(Math.PI);
             ctx.drawImage(this.image, -this.width / 2, -this.topHeight / 2, this.width, this.topHeight);
             ctx.restore();
 
-            // Draw bottom pipe
+            // Draw bottom pipe with shadow
+            ctx.save();
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.2)';
+            ctx.shadowBlur = 10;
+            ctx.shadowOffsetX = 5;
+            ctx.shadowOffsetY = 5;
             ctx.drawImage(
                 this.image,
                 this.x,
@@ -102,6 +158,7 @@ class Pipe {
                 this.width,
                 SCREEN_HEIGHT - this.bottomY
             );
+            ctx.restore();
         } else {
             ctx.fillStyle = GREEN;
             ctx.fillRect(this.x, 0, this.width, this.topHeight);
@@ -112,16 +169,10 @@ class Pipe {
     checkCollision(bird) {
         const birdBounds = bird.getBounds();
         
-        // Check collision with top pipe
-        if (birdBounds.right > this.x && birdBounds.left < this.x + this.width &&
-            birdBounds.top < this.topHeight) {
-            return true;
-        }
-        
-        // Check collision with bottom pipe
-        if (birdBounds.right > this.x && birdBounds.left < this.x + this.width &&
-            birdBounds.bottom > this.bottomY) {
-            return true;
+        if (birdBounds.right > this.x && birdBounds.left < this.x + this.width) {
+            if (birdBounds.top < this.topHeight || birdBounds.bottom > this.bottomY) {
+                return true;
+            }
         }
         
         return false;
@@ -154,7 +205,6 @@ class Game {
     }
 
     setupEventListeners() {
-        // Keyboard controls (for desktop)
         document.addEventListener('keydown', (event) => {
             if (event.code === 'Space') {
                 if (!this.gameOver) {
@@ -162,12 +212,9 @@ class Game {
                 }
             } else if (event.code === 'KeyR' && this.gameOver) {
                 this.reset();
-            } else if (event.code === 'KeyQ' && this.gameOver) {
-                // Handle quit if needed
             }
         });
 
-        // Mouse and touch controls
         canvas.addEventListener('click', (event) => {
             event.preventDefault();
             if (!this.gameOver) {
@@ -177,7 +224,6 @@ class Game {
             }
         });
 
-        // Add touch event listeners
         canvas.addEventListener('touchstart', (event) => {
             event.preventDefault();
             if (!this.gameOver) {
@@ -187,7 +233,6 @@ class Game {
             }
         });
 
-        // Prevent default touch behaviors
         document.addEventListener('touchmove', (event) => {
             event.preventDefault();
         }, { passive: false });
@@ -198,13 +243,11 @@ class Game {
 
         this.bird.update();
 
-        // Spawn new pipes
         if (this.lastPipeSpawn === 0 || performance.now() - this.lastPipeSpawn >= 1500) {
             this.pipes.push(new Pipe());
             this.lastPipeSpawn = performance.now();
         }
 
-        // Update and check pipes
         this.pipes.forEach(pipe => {
             pipe.update();
 
@@ -218,40 +261,57 @@ class Game {
             }
         });
 
-        // Remove offscreen pipes
         this.pipes = this.pipes.filter(pipe => !pipe.isOffscreen());
 
-        // Check for ceiling/floor collisions
         if (this.bird.y < 0 || this.bird.y + this.bird.height > SCREEN_HEIGHT) {
             this.gameOver = true;
         }
     }
 
     draw() {
-        // Clear canvas
-        ctx.fillStyle = SKY_BLUE;
+        // NEW: Create gradient background for better visuals
+        const gradient = ctx.createLinearGradient(0, 0, 0, SCREEN_HEIGHT);
+        gradient.addColorStop(0, '#87CEEB');  // Sky blue at top
+        gradient.addColorStop(1, '#E0F6FF');  // Lighter blue at bottom
+        ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
-        // Draw game elements
         this.pipes.forEach(pipe => pipe.draw());
         this.bird.draw();
 
-        // Draw score
-        ctx.fillStyle = BLACK;
-        ctx.font = '18px MaximaNouva';
+        // NEW: Add shadow to score text
+        ctx.save();
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+        ctx.shadowBlur = 4;
+        ctx.shadowOffsetX = 2;
+        ctx.shadowOffsetY = 2;
+        ctx.fillStyle = WHITE;
+        ctx.font = 'bold 24px MaximaNouva';
         ctx.fillText(`Score: ${this.score}`, 10, 30);
+        ctx.restore();
 
         if (this.gameOver) {
-            ctx.fillStyle = BLACK;
-            ctx.font = '18px MaximaNouva';
-            ctx.fillText('Game Over!', SCREEN_WIDTH/2 - 40, SCREEN_HEIGHT/3);
-            ctx.fillText(`Score: ${this.score}`, SCREEN_WIDTH/2 - 30, SCREEN_HEIGHT/3 + 50);
-            ctx.fillText('Tap to Restart and Try Again', SCREEN_WIDTH/2 - 100, SCREEN_HEIGHT/3 + 100);
+            ctx.save();
+            // NEW: Add semi-transparent overlay for game over screen
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+            
+            // NEW: Add shadow to game over text
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+            ctx.shadowBlur = 4;
+            ctx.shadowOffsetX = 2;
+            ctx.shadowOffsetY = 2;
+            ctx.fillStyle = WHITE;
+            ctx.font = 'bold 32px MaximaNouva';
+            ctx.fillText('Game Over!', SCREEN_WIDTH/2 - 80, SCREEN_HEIGHT/3);
+            ctx.font = 'bold 24px MaximaNouva';
+            ctx.fillText(`Score: ${this.score}`, SCREEN_WIDTH/2 - 40, SCREEN_HEIGHT/3 + 50);
+            ctx.fillText('Tap to Restart', SCREEN_WIDTH/2 - 60, SCREEN_HEIGHT/3 + 100);
+            ctx.restore();
         }
     }
 }
 
-// Start the game
 const game = new Game();
 let lastTime = 0;
 
